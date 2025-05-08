@@ -29,58 +29,105 @@
 <body class="container mt-4">
     <h1>📄 PDF Table Extractor</h1>
 
-    <form method="post" enctype="multipart/form-data" class="mb-4">
-        <input type="file" name="pdf" class="form-control" required>
+    <form id="upload-form" class="mb-4">
+        <input type="file" name="pdf" id="pdf-input" class="form-control" required>
         <button type="submit" class="btn btn-primary mt-2">Upload PDF</button>
     </form>
 
-    {% if tables %}
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <div><h4 id="table-title">Table 1 of {{ tables|length }}</h4></div>
-            <div>
-                <button class="btn btn-outline-secondary btn-sm" onclick="prevTable()">← Previous</button>
-                <button class="btn btn-outline-secondary btn-sm" onclick="nextTable()">Next →</button>
-                <a id="download-link" href="/download/0" class="btn btn-success btn-sm ms-3">Download Excel</a>
-            </div>
+    <div id="table-navigation" class="d-flex justify-content-between align-items-center mb-2" style="display: none;">
+        <div><h4 id="table-title"></h4></div>
+        <div>
+            <button class="btn btn-outline-secondary btn-sm" onclick="prevTable()">← Previous</button>
+            <button class="btn btn-outline-secondary btn-sm" onclick="nextTable()">Next →</button>
+            <a id="download-link" href="#" class="btn btn-success btn-sm ms-3" download>Download Excel</a>
         </div>
+    </div>
 
-        <div id="table-container" class="scrollable-table mb-4">
-            {{ tables[0][1]|safe }}
-        </div>
-    {% endif %}
+    <div id="table-container" class="scrollable-table mb-4"></div>
 
     <h5>🧾 Logs</h5>
     <div id="log-box" class="log-box"></div>
 
     <script>
+        let tables = [];
         let current = 0;
-        const tables = {{ tables|tojson if tables else "[]" }};
-        const total = tables.length;
 
         function showTable(index) {
-            document.getElementById('table-container').innerHTML = tables[index][1];
-            document.getElementById('table-title').innerText = `Table ${index + 1} of ${total}`;
-            document.getElementById('download-link').href = `/download/${index}`;
+            const container = document.getElementById('table-container');
+            const title = document.getElementById('table-title');
+            const download = document.getElementById('download-link');
+            if (!tables[index]) return;
+
+            container.innerHTML = tables[index][1];
+            title.textContent = `Table ${index + 1} of ${tables.length}`;
+            download.href = `/download/${index}`;
             current = index;
         }
 
         function nextTable() {
-            if (current < total - 1) showTable(current + 1);
+            if (current < tables.length - 1) showTable(current + 1);
         }
 
         function prevTable() {
             if (current > 0) showTable(current - 1);
         }
 
+        document.getElementById('upload-form').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const formData = new FormData();
+            const fileInput = document.getElementById('pdf-input');
+            if (!fileInput.files.length) return;
+            formData.append('pdf', fileInput.files[0]);
+
+            // ✅ Reset all frontend state and DOM
+            document.getElementById('log-box').innerHTML = '⏳ Processing started...\n';
+            document.getElementById('table-container').innerHTML = '';
+            document.getElementById('table-title').textContent = '';
+            document.getElementById('download-link').href = '#';
+            document.getElementById('table-navigation').style.display = 'none';
+
+            tables = [];
+            current = 0;
+
+            fetch('/', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+
+                const tablesScript = doc.querySelector('script[data-tables-json]');
+                if (!tablesScript) return;
+
+                const tablesData = JSON.parse(tablesScript.textContent);
+                tables = tablesData;
+
+                if (tables.length > 0) {
+                    showTable(0);
+                    document.getElementById('table-navigation').style.display = 'flex';
+                }
+            })
+            .catch(err => {
+                document.getElementById('log-box').innerHTML += `❌ Upload failed: ${err.message}\n`;
+            });
+        });
+
         const logBox = document.getElementById("log-box");
         const eventSource = new EventSource("/stream");
-
         eventSource.onmessage = function(e) {
             const line = document.createElement("div");
             line.textContent = e.data;
             logBox.appendChild(line);
             logBox.scrollTop = logBox.scrollHeight;
         };
+    </script>
+
+    <!-- ✅ Always render the table data block to ensure JavaScript reset works -->
+    <script type="application/json" data-tables-json>
+        {{ tables|tojson if tables else '[]' }}
     </script>
 </body>
 </html>

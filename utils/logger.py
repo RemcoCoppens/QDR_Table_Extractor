@@ -26,8 +26,12 @@ def get_logger(name: str):
         console_handler = logging.StreamHandler()
         console_handler.setFormatter(formatter)
 
+        queue_handler = QueueHandler()
+        queue_handler.setFormatter(formatter)
+
         logger.addHandler(file_handler)
         logger.addHandler(console_handler)
+        logger.addHandler(queue_handler)
 
     return logger
 

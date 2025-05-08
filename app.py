@@ -18,11 +18,14 @@ tables_cache = []
 @app.route('/', methods=['GET', 'POST'])
 def index():
     global tables_cache
+    tables_cache = []
     logs = None
 
     if request.method == 'POST':
         uploaded_file = request.files['pdf']
         if uploaded_file.filename != '':
+            open("app.log", "w").close()
+            
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], uploaded_file.filename)
             uploaded_file.save(filepath)
 
@@ -47,7 +50,10 @@ def index():
                 logs=logs
             )
 
-    return render_template('index.html', tables=None, logs=None)
+    return render_template('index.html', tables=[
+        (i, df.to_html(classes="table table-bordered", index=False))
+        for i, df in enumerate(tables_cache)
+    ])
 
 @app.route('/stream')
 def stream():
