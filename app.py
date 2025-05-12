@@ -26,10 +26,9 @@ def index():
         if uploaded_file.filename != '':
             open("app.log", "w").close()
             
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], uploaded_file.filename)
-            uploaded_file.save(filepath)
+            file_bytes = uploaded_file.read()
+            parser = PdfParser(file_bytes=file_bytes)
 
-            parser = PdfParser(file_path=filepath)
             pages = parser.raw_text.split("\n------------\n")
             extractor = TableExtractor()
             tables_cache = extractor.extract_from_pages(pages_text=pages)
