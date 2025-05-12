@@ -4,8 +4,11 @@ import pandas as pd
 from io import BytesIO
 import os
 import queue
+from dotenv import load_dotenv
 
 from utils import log_queue
+
+_ = load_dotenv()
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -75,4 +78,4 @@ def download(table_id):
     return send_file(output, as_attachment=True, download_name=f'table_{table_id}.xlsx', mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=80)

@@ -9,12 +9,16 @@ ENV CONDA_ENV_NAME=flaskenv
 # Set work directory
 WORKDIR /app
 
+# Setup pytesseract OCR engine
+RUN apt-get update && \
+    apt-get install -y tesseract-ocr tesseract-ocr-nld
+
 # Copy environment.yml and create the environment
 COPY environment.yml .
 RUN conda env create -f environment.yml
 
 # Activate the environment
-SHELL ["conda", "run", "-n", "flaskenv", "/bin/bash", "-c"]
+SHELL ["conda", "run", "-n", "qompare_model_api", "/bin/bash", "-c"]
 
 # Copy the rest of your app files
 COPY . .
@@ -23,4 +27,5 @@ COPY . .
 EXPOSE 80
 
 # Use gunicorn as the app server
-CMD ["conda", "run", "--no-capture-output", "-n", "flaskenv", "gunicorn", "-b", "0.0.0.0:80", "app:app"]
+CMD ["conda", "run", "--no-capture-output", "-n", "qompare_model_api", "python", "app.py"]
+
