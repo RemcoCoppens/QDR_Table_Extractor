@@ -15,17 +15,22 @@ class PdfParser:
     Compatible with both S3 and local paths.
     """
 
-    def __init__(self, file_path: str):
+    def __init__(self, file_path:str=None, file_bytes:bytes=None):
         """
         Args:
             file_path (str): Path to the file (S3 key or local path).
             source (str): "s3" or "local".
         """
         self.logger = get_logger(__name__)
-        self.file_path = file_path
+        self.file_path = file_path or "in-memory.pdf"
 
-        self._validate_file_type()
-        self.file = self._load_file()
+        if file_bytes:
+            self.file = io.BytesIO(file_bytes)
+        elif file_path:
+            self._validate_file_type()
+            self.file = self._load_file()
+        else:
+            raise ValueError("Either file_path or file_bytes must be provided.")
 
         self.n_tokens = count_tokens_in_pdf(file=self.file)
         self.token_threshold = 10
